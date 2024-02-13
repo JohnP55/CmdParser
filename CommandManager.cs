@@ -13,13 +13,13 @@ namespace JP55.CmdParser
     }
     public class CommandManager
     {
-        public List<CommandBase> Commands { get; } = new List<CommandBase>();
+        public List<Command> Commands { get; } = new List<Command>();
         public CommandManager() { }
-        public CommandManager(params CommandBase[] commands)
+        public CommandManager(params Command[] commands)
         {
             Commands.AddRange(commands);
         }
-        public void AddCommand(CommandBase command)
+        public void AddCommand(Command command)
         {
             Commands.Add(command);
         }
@@ -33,19 +33,41 @@ namespace JP55.CmdParser
             }
             return string.Join($"{Environment.NewLine}{Environment.NewLine}", individualCommands);
         }
-        public CommandBase? Parse(IEnumerable<string> args)
+        public ReadyCommand? Parse(IEnumerable<string> args)
         {
             if (args.Count() == 0) return null;
             string name = args.First();
-            foreach (var command in Commands)
+            Command? command = null;
+            foreach (var cmditer in Commands)
             {
-                if (command.Name == name)
-                    return command;
+                if (cmditer.Name == name)
+                {
+                    command = cmditer;
+                    break;
+                }
             }
-            
-            return null;
+            if (command is null) return null;
+
+            List<CommandArgument> arguments = new List<CommandArgument>();
+            int i = 1;
+            while (i < args.Count())
+            {
+                CommandArgument? argument = null;
+                foreach(var argiter in command.Arguments)
+                {
+                    if (args.ElementAt(i) == argiter.Name)
+                    {
+                        argument = argiter;
+                        break;
+                    }
+                }
+                if (argument is null) return null;
+
+
+                i += argument.ArgCount;
+            }
         }
-        public TOut Execute<TOut>(CommandBase command, IEnumerable<string> args)
+        public TOut Execute<TOut>(Command command, IEnumerable<string> args)
         {
             var method = command.GetType().GetMethod("Execute", new[] { typeof(IEnumerable<string>) })!;
             return (TOut)method.Invoke(command, new[] { args })!;

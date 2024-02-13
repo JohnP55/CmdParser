@@ -9,7 +9,6 @@ namespace JP55.CmdParser
     public enum CommandArgumentType
     {
         FLAG,
-        VALUE,
         KEY_VALUE
     }
     public class CommandArgument
