@@ -11,6 +11,12 @@ namespace JP55.CmdParser
     {
         public CommandNotFoundException() : base("The specified command was not found in the command manager.") { }
     }
+    public class ArgumentCountMismatchException : Exception
+    {
+        public ArgumentCountMismatchException() : base("The amount of arguments provided does not match the command.") { }
+        public ArgumentCountMismatchException(int expected, int got) : base($"The amount of arguments provided does not match the command. (Expected {expected}, got {got})") { }
+    }
+
     public class CommandManager
     {
         public List<CommandBase> Commands { get; } = new List<CommandBase>();
@@ -33,22 +39,30 @@ namespace JP55.CmdParser
             }
             return string.Join($"{Environment.NewLine}{Environment.NewLine}", individualCommands);
         }
-        public CommandBase? Parse(IEnumerable<string> args)
+        public string ParseAndExecute(IEnumerable<string> argv)
         {
-            if (args.Count() == 0) return null;
-            string name = args.First();
-            foreach (var command in Commands)
+            if (argv.Count() == 0) return HelpMsg();
+            string name = argv.First();
+            CommandBase? command = null;
+            foreach (var cmd in Commands)
             {
-                if (command.Name == name)
-                    return command;
+                if (cmd.Name == name)
+                {
+                    command = cmd;
+                    break;
+                }
             }
-            
-            return null;
-        }
-        public TOut Execute<TOut>(CommandBase command, IEnumerable<string> args)
-        {
+
+            if (command is null)
+                return HelpMsg();
+
+            var cmdArgs = argv.Skip(1);
+
+            if (cmdArgs.Count() != command.ArgCount)
+                return HelpMsg();
+
             var method = command.GetType().GetMethod("Execute", new[] { typeof(IEnumerable<string>) })!;
-            return (TOut)method.Invoke(command, new[] { args })!;
+            return (string)method.Invoke(command, new[] { cmdArgs })!;
         }
     }
 }
